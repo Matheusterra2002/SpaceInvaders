@@ -2,6 +2,7 @@ import pygame, random
 from pygame.locals import *
 import _thread
 import time
+import random
 
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 500
@@ -10,15 +11,48 @@ MENU = True
 START = False
 SOBRE = False
 HELP = False
+
 SPEED_NAVE = 20
 SPEED_TIRO = 15
+SPEED_INIMIGO = 1
+
 X_NAVE = 0
+
 X_ALIEN = 0 
+Y_ALIEN = 100
+
 Y_TIRO = 460
 X_TIRO = 0
+x_tiro = 0
+
+X_PROTECAO = 30
+
+X_BONUS = 30
+
+X_TIRO_INIMIGO = 0
+Y_TIRO_INIMIGO = 0
+
+COLIDIU = False
 
 continua = False
 
+pontos = 0
+
+sentido = 0
+sentido2 = 1
+
+pressionado = False
+
+linha1 = 0
+linha2 = 0
+
+xpos = 0
+
+numAleatorio = 0
+
+contador = 0 
+
+acertou = False
 
 class Nave(pygame.sprite.Sprite):
     def __init__(self):
@@ -44,83 +78,183 @@ class Nave(pygame.sprite.Sprite):
         self.rect[0] = X_NAVE
     
 class Tiro(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, colidiu):
         pygame.sprite.Sprite.__init__(self)
-
+        global Y_TIRO
 
         self.image = pygame.image.load('./assets/images/tiro.png').convert_alpha()
-        self.image = pygame.transform.scale(self.image, (10,20)) 
+        self.image = pygame.transform.scale(self.image, (5,20)) 
         self.mask = pygame.mask.from_surface(self.image)
 
         self.rect = self.image.get_rect()
         self.rect[0] = 0
         self.rect[1] = 460
 
-    def update(self):
-        self.rect[0] = X_TIRO
-        self.rect[1] = Y_TIRO
+        if colidiu:
+            Y_TIRO = 460
+            self.rect[1] = Y_TIRO
+        else:
+            self.rect[1] = Y_TIRO
 
-def atira():
+    def update(self, x):
+        X_TIRO = x
+        if pressionado != True:
+            self.rect[0] = X_TIRO + 3
+            self.rect[1] = Y_TIRO
+        else:
+            self.rect[1] = Y_TIRO
+        
+
+def atira(xpos):
         global continua
+        global pressionado
         global Y_TIRO
         global X_NAVE
         global X_TIRO
+        global COLIDIU
 
-        X_TIRO = X_NAVE
-
-        while continua:
-            if Y_TIRO > 10:
-                Y_TIRO -= SPEED_TIRO
-                
-            time.sleep(0.08)
+        X_TIRO = xpos
+        if Y_TIRO == 460 or Y_TIRO == 10 and COLIDIU == False:    
+            SOM_TIRO.play()
+            while continua:
+                if Y_TIRO > 10:
+                    Y_TIRO -= SPEED_TIRO
+    
+                if Y_TIRO == 10:
+                    continua = False
+                    pressionado = False
+                    Y_TIRO = 460
+                time.sleep(0.03)
     
 
 class Alien(pygame.sprite.Sprite):
-    def __init__(self,proximo,x_proximo):
+    def __init__(self, x_novo, y_novo):
         pygame.sprite.Sprite.__init__(self)
 
         self.speed = SPEED_NAVE
-        
-        self.current_image = 0
 
         self.image = pygame.image.load('./assets/images/alien.png').convert_alpha()
         self.image = pygame.transform.scale(self.image, (40,40))     
         self.mask = pygame.mask.from_surface(self.image)
 
         self.rect = self.image.get_rect()
-        self.rect[0] = 0
-        self.rect[1] = 100
-
-        if proximo:
-            self.rect[0] = x_proximo
+        X_ALIEN = x_novo
+        Y_ALIEN = y_novo
+        self.rect[0] = X_ALIEN
+        self.rect[1] = Y_ALIEN 
     
     def update(self):
-        self.rect[0] = X_ALIEN
-
-def get_aliens(x_proximo):
-    x_proximo = X_ALIEN + x_proximo
-    inimigo = Alien(True, x_proximo)
-    return (inimigo)
-    
-sentido = 0
-def movimenta(width, height):
-        global X_ALIEN
         global sentido
-        
-        while True:
-            if sentido == 0:
-                X_ALIEN += 5
-            if sentido ==1:
-                X_ALIEN -= 5
-            
-            if X_ALIEN == width - 50:
-                sentido = 1
-            
-            if X_ALIEN == 20:
-                sentido = 0
-            
-            time.sleep(0.1)
+        global SPEED_INIMIGO
 
+        if sentido == 0:
+            ##if pontos > 100 and pontos < 290:                
+            ##    SPEED_INIMIGO = 2
+
+            ##if pontos == 290:
+            ##    SPEED_INIMIGO = 4
+
+            self.rect[0] += SPEED_INIMIGO
+
+        if sentido == 1:
+            ##if pontos > 100 and pontos < 290:                
+            ##    SPEED_INIMIGO = 2
+
+            ##if pontos == 290:
+            ##    SPEED_INIMIGO = 3
+
+            self.rect[0] -= SPEED_INIMIGO
+        
+        if self.rect[0] == 0:
+            sentido = 0
+        
+        if self.rect[0] == 560:
+            sentido = 1
+
+
+class Protecao(pygame.sprite.Sprite):
+    def __init__(self, x_novo):
+        pygame.sprite.Sprite.__init__(self)
+
+        self.image = pygame.image.load('./assets/images/protecao.png').convert_alpha()
+        self.image = pygame.transform.scale(self.image, (50,50))     
+        self.mask = pygame.mask.from_surface(self.image)
+
+        self.rect = self.image.get_rect()
+        X_PROTECAO = x_novo
+        self.rect[0] = X_PROTECAO
+        self.rect[1] = 350 
+
+class alien_Bonus(pygame.sprite.Sprite):
+    def __init__(self, x_novo):
+        pygame.sprite.Sprite.__init__(self)
+
+        self.speed = SPEED_NAVE
+
+        self.image = pygame.image.load('./assets/images/nave_bonus.png').convert_alpha()
+        self.image = pygame.transform.scale(self.image, (50,20))     
+        self.mask = pygame.mask.from_surface(self.image)
+
+        self.rect = self.image.get_rect()
+        X_ALIEN = x_novo
+        self.rect[0] = X_ALIEN
+        self.rect[1] = 40 
+    
+    def update(self):
+        global sentido2
+        global SPEED_INIMIGO
+
+        if sentido2 == 0:
+            self.rect[0] += SPEED_INIMIGO + 1
+
+        if sentido2 == 1:
+            self.rect[0] -= SPEED_INIMIGO + 1
+        
+        if self.rect[0] == 0:
+            sentido2 = 0
+        
+        if self.rect[0] == 560:
+            sentido2 = 1
+
+class Tiro_Inimigo(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+
+        self.image = pygame.image.load('./assets/images/tiro_inimigo.png').convert_alpha()
+        self.image = pygame.transform.scale(self.image, (5,20))     
+        self.mask = pygame.mask.from_surface(self.image)
+
+        self.rect = self.image.get_rect()
+        self.rect[0] = X_TIRO_INIMIGO
+        self.rect[1] = Y_TIRO_INIMIGO
+    
+    def update(self):
+        self.rect[0] = X_TIRO_INIMIGO
+        self.rect[1] += 1
+            
+    
+    def atira_inimigo(self):
+        global X_TIRO_INIMIGO
+        global Y_TIRO_INIMIGO
+        
+        numAleatorio = random.randint(1, 3)
+    
+        if numAleatorio == 1:
+            X_TIRO_INIMIGO = 100
+            Y_TIRO_INIMIGO = 100
+
+        if numAleatorio == 2:
+            X_TIRO_INIMIGO = 300
+            Y_TIRO_INIMIGO = 150
+
+        if numAleatorio == 3:
+            X_TIRO_INIMIGO = 500
+            Y_TIRO_INIMIGO = 200
+
+def gera_tiro_inimigo(self):
+    tiro_alien_group = pygame.sprite.Group()
+    tiro_alien = Tiro_Inimigo()
+    tiro_alien_group.add(tiro_alien)
 
 ## Métodos referentes aos seletores de opção
 x_seletor = 240
@@ -138,12 +272,21 @@ def sobe_seletor():
         y_seletor -= 25
 
 
+
+
 ## Inicializa a o pygame
 pygame.init()
 
+## Definindo o fundo do jogo
 BACKGROUND = pygame.image.load('./assets/images/fundo.png')
 BACKGROUND = pygame.transform.scale(BACKGROUND, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
+## Inicializando o mixer e definindo os sons
+pygame.mixer.init()
+SOM_TEMA = pygame.mixer.Sound('./assets/sounds/som_Tema.wav')
+SOM_TIRO = pygame.mixer.Sound('./assets/sounds/som_Tiro.wav')
+SOM_BONUS = pygame.mixer.Sound('./assets/sounds/som_nave_bonus.wav')
+SOM_EXPLOSAO = pygame.mixer.Sound('./assets/sounds/som_Explosao.wav')
 
 ## Criação da tela (Medidas já foram estabelecidas no início)
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -167,25 +310,51 @@ text_seletor2 = font_menu.render('<<', True, (255, 255, 255))
 font = pygame.font.SysFont("comicsansms", 20)
 text = font.render('Pressione espaço para selecionar', True, (255, 255, 255))
 
+## Parte referente ao texto dos pontos
+font_pontos = pygame.font.SysFont("comicsansms", 25)
+text_score = font_pontos.render('Score', True, (255, 255, 0))
 
+## Criando a nave
 nave_group = pygame.sprite.Group()
 nave = Nave()
 nave_group.add(nave)
 
+## Criando os tiros
 tiro_group = pygame.sprite.Group()
-projetil = Tiro()
+projetil = Tiro(False)
 tiro_group.add(projetil)
 
-
+## gerando nave dos aliens
 alien_group = pygame.sprite.Group()
-alien = Alien(False, 0)
-for i in range(2):
-    inimigo = get_aliens(10)
-    alien_group.add(alien)
+for i in range(30):
+    if i <= 9:
+        inimigo = Alien(50 * i, Y_ALIEN)
+        alien_group.add(inimigo)
 
+    if i >= 10 and i <= 19:
+        inimigo = Alien(50 * linha1, Y_ALIEN + 50)
+        alien_group.add(inimigo)
+        linha1 = linha1 + 1
+    
+    if i >= 20:
+        inimigo = Alien(50 * linha2, Y_ALIEN + 100)
+        alien_group.add(inimigo)
+        linha2 = linha2 + 1
 
+## Gerando as proteções
+protecao_group = pygame.sprite.Group()
+for i in range(4):
+    protecao = Protecao(180 * i)
+    protecao_group.add(protecao)
 
-_thread.start_new_thread(movimenta, (SCREEN_WIDTH, SCREEN_HEIGHT))
+## Gerando a nave bonus
+bonus_group = pygame.sprite.Group()
+bonus_nave = alien_Bonus(40)
+
+## Gerando tiro do inimigo
+tiro_alien_group = pygame.sprite.Group()
+tiro_alien = Tiro_Inimigo()
+tiro_alien_group.add(tiro_alien)
 
 clock = pygame.time.Clock()
 
@@ -193,7 +362,9 @@ clock = pygame.time.Clock()
 while True:    
     ## O while MENU só irá funcionar quando o usuário estiver na tela de menu, ou seja, quando MENU for igual a True
     while MENU:
-        
+        ## iniciando o som
+        SOM_TEMA.play()
+
         ## criação do envento caso o usuário feche o jogo
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -246,10 +417,14 @@ while True:
         pygame.display.flip()
         clock.tick(60)
 
-    pressionado = False
     ## O while START só irá funcionar quando o usuário estiver na tela de start, ou seja, quando START for igual a True
     while START:
-        pressionado = False
+        clock.tick(100)
+        SOM_TEMA.stop()
+
+        ## Mostra os pontos do jogador
+        text_pontos = font_pontos.render(str(pontos), True, (255, 255, 0))
+
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
@@ -267,37 +442,139 @@ while True:
             if pressed[pygame.K_LEFT] and X_NAVE > 0:
                 nave.move_esquerda()
                 
-            
-            if Y_TIRO == 10 or Y_TIRO == 460:
-                if pressed[pygame.K_SPACE]: 
-                    if Y_TIRO == 460:
-                        continua = True
-                        _thread.start_new_thread(atira,())
-                        
-                        
-                    if Y_TIRO == 10:
-                        continua = False
-                        Y_TIRO = 460
-                    
+            if pressionado != True:
+                xpos = X_NAVE
+
+            if pressed[pygame.K_SPACE]: 
+                continua = True
+
+                _thread.start_new_thread(atira,(xpos,))
+                pressionado = True
                 pygame.time.delay(50)
             
-
+        x_tiro = X_NAVE + 15
         screen.fill((0, 0, 0))
-        
-        if pressionado != True:
-            X_TIRO = X_NAVE + 15
 
         ## define o fundo
         screen.blit(BACKGROUND, (0, 0))
 
-        tiro_group.update()
+        ## colocando os pontos na tela
+        screen.blit(text_score,(10,10))
+        screen.blit(text_pontos,(70,10))
+
+        tiro_group.update(x_tiro)
         alien_group.update()
+        bonus_group.update()
+        tiro_alien_group.update()
 
         nave_group.draw(screen)
         tiro_group.draw(screen)
         alien_group.draw(screen)
+        protecao_group.draw(screen)
+        bonus_group.draw(screen)
+        tiro_alien_group.draw(screen)
         
-        clock.tick(100)
+        ## Verifica se houve colisão entre o tiro da nave e o inimigo
+        if pygame.sprite.groupcollide(tiro_group, alien_group, True, True):
+            
+            SOM_EXPLOSAO.play()
+            
+            continua = False
+            pontos += 10
+            pressionado = False
+
+            ## Criando um novo tiro
+            tiro_group = pygame.sprite.Group()
+            projetil = Tiro(True)
+            tiro_group.add(projetil)
+            tiro_group.update(x_tiro)
+            tiro_group.draw(screen)
+
+        ## Verifica se houve colisão entre o tiro do jogador e a proteção
+        if pygame.sprite.groupcollide(tiro_group, protecao_group, True, False):
+            continua = False
+            pressionado = False
+
+            tiro_group = pygame.sprite.Group()
+            projetil = Tiro(True)
+            tiro_group.add(projetil)
+            tiro_group.update(x_tiro)
+            tiro_group.draw(screen)
+
+        ## Verifica se já acabou todos os aliens da tela
+        if acertou == True:
+            if pontos == 350 or pontos == 650:
+                
+                linha1 = 0
+                linha2 = 0
+
+                alien_group = pygame.sprite.Group()
+                
+                for i in range(30):
+                    if i <= 9:
+                        inimigo = Alien(50 * i, 100)
+                        alien_group.add(inimigo)
+
+                    if i >= 10 and i <= 19:
+                        inimigo = Alien(50 * linha1, 150)
+                        alien_group.add(inimigo)
+                        linha1 = linha1 + 1
+        
+                    if i >= 20:
+                        inimigo = Alien(50 * linha2, 200)
+                        alien_group.add(inimigo)
+                        linha2 = linha2 + 1
+        
+        if acertou == False: 
+            if pontos == 300 or pontos == 600:
+                
+                linha1 = 0
+                linha2 = 0
+
+                alien_group = pygame.sprite.Group()
+                
+                for i in range(30):
+                    if i <= 9:
+                        inimigo = Alien(50 * i, 100)
+                        alien_group.add(inimigo)
+
+                    if i >= 10 and i <= 19:
+                        inimigo = Alien(50 * linha1, 150)
+                        alien_group.add(inimigo)
+                        linha1 = linha1 + 1
+        
+                    if i >= 20:
+                        inimigo = Alien(50 * linha2, 200)
+                        alien_group.add(inimigo)
+                        linha2 = linha2 + 1
+        
+        ## Cria a nave bonus
+        if pontos >= 150 and pontos < 200:
+            bonus_group.add(bonus_nave)
+            SOM_BONUS.play()
+        if pontos >= 200:
+            bonus_group.remove(bonus_nave)
+            SOM_BONUS.stop()
+            
+
+        ## Verifica se houve a colisão com a nave bonus
+        if pygame.sprite.groupcollide(tiro_group, bonus_group, True, True):
+            SOM_EXPLOSAO.play()
+            
+            continua = False
+            pontos += 50
+            pressionado = False
+            acertou = True
+
+            ## Criando um novo tiro
+            tiro_group = pygame.sprite.Group()
+            projetil = Tiro(True)
+            tiro_group.add(projetil)
+            tiro_group.update(x_tiro)
+            tiro_group.draw(screen)
+            
+
+        pygame.display.flip()
         pygame.display.update()
         
     
@@ -307,7 +584,7 @@ while True:
 
     ## O while SOBRE só irá funcionar quando o usuário estiver na tela de sobre, ou seja, quando SOBRE for igual a True
     while SOBRE:
-        
+
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
@@ -339,8 +616,9 @@ while True:
 
     ## criando texto da tela Help
     text_TelaHelp = font_info.render('Help', True, (255, 255, 0))
+
     while HELP:
-        
+
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
